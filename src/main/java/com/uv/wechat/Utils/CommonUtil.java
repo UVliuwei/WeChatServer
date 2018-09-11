@@ -13,6 +13,7 @@ package com.uv.wechat.Utils;
 扫描带参数二维码——未关注时触发subscribe/已关注时触发scan
  */
 
+import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Maps;
 import com.thoughtworks.xstream.XStream;
 import com.uv.wechat.Entity.ChatMessage;
@@ -26,6 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 public class CommonUtil {
@@ -58,6 +66,8 @@ public class CommonUtil {
     public static final String USERME = "opRpe1SGSNg6v75UIYnOs2waj8Iw";
     //初始化菜单url
     public static final String MENU_URL = " https://api.weixin.qq.com/cgi-bin/menu/create?access_token=";
+    //获取文章列表
+    public static final String MSGLIST_URL = "https://api.weixin.qq.com/cgi-bin/material/batchget_material?access_token=";
 
     /**
      * xml转换成map
@@ -106,4 +116,36 @@ public class CommonUtil {
         return object2Xml(message);
     }
 
+    /**
+     * 封装url请求
+     *
+     * @param method 请求方式
+     * @param params 请求参数
+     */
+    public static JSONObject getUrlResource(String url, HttpMethod method, MultiValueMap<String, String> params) {
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> responseEntity = null;
+        if (method.matches("GET")) {
+            responseEntity = restTemplate.getForEntity(url, String.class);
+        } else if (method.matches("POST")) {
+            HttpHeaders headers = new HttpHeaders();
+            //设置类型
+            MediaType type = MediaType.parseMediaType("application/json; charset=UTF-8");
+            headers.setContentType(type);
+            HttpEntity<MultiValueMap> requestEntity = new HttpEntity<>(headers, params);
+            //  封装参数，千万不要替换为Map与HashMap，否则参数无法传递
+            if (params != null) {
+                responseEntity = restTemplate.postForEntity(url, requestEntity, String.class);
+            } else {
+                responseEntity = restTemplate.postForEntity(url, requestEntity, String.class);
+            }
+            if ("200".equals(responseEntity.getStatusCode().toString())) {
+                JSONObject jsonObject = JSONObject.parseObject(responseEntity.getBody());
+                return jsonObject;
+            }
+        }
+        return null;
+    }
+
 }
+
